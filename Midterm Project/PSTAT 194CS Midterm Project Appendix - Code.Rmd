@@ -1,0 +1,227 @@
+---
+title: 'PSTAT 194CS Midterm Project Appendix: Code'
+author: "Sunny Zhong, Isabella Sri, Bowie Chuang"
+date: "2024-05-13"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Generating Seed Number: $R_{0}$
+
+```{r}
+# Generate 10 random numbers and take the mean of that 10 numbers to generate R_0
+set.seed(111)
+R_0 = round(runif(10, max = 1, min = 0), 4)
+R_0 = mean(R_0)
+```
+
+### Finding $R_{1}$ and $R_{2}$: Developing the function that picks the middle four digits
+
+```{r}
+extract_middle_four = function(input_avg_number) {
+  sqrd_x = input_avg_number * input_avg_number
+  sqrd_x_str = as.character(sqrd_x)
+  middle_start = ceiling((nchar(sqrd_x_str) - 4) / 2) + 2
+  middle_digits = substr(sqrd_x_str, start = middle_start, stop = middle_start + 3)
+  middle_digits = as.integer(middle_digits)
+  x = format(middle_digits / 10^4, nsmall=4)
+  x = as.numeric(x)
+  x = round(x, digits=4)
+  return(x)
+}
+
+R_1 = extract_middle_four(R_0)
+R_2 = extract_middle_four(R_1)
+```
+
+### Beta Function
+
+```{r}
+beta_func = function(x, a, b) {
+  beta_result = beta(a, b) * (x ^ (a - 1)) * ((1 - x) ^ (b - 1))
+  return(beta_result) 
+}
+```
+
+### Three Scenarios of Parameters (Using Examples from the Article):
+
+**$\alpha > \beta; \alpha = 7, \beta = 3$**
+
+**$\alpha = \beta; \alpha = 5, \beta = 5$**
+
+**$\alpha < \beta; \alpha = 3, \beta = 7$**
+
+\
+*$\epsilon \in [0, 0.02]$ is constant for all three scenarios*
+
+We will use the same seed number $R_{0}$ and the random numbers $R_{1}$ and $R_{2}$ for all three scenarios.
+
+### Implementing RNG Method for Beta Distribution Parameters Excluding Neutrosophic Random Variables
+
+```{r}
+epsilon = c(0, 0.02)
+NR_1 = R_1 - epsilon
+NR_2 = R_2 - epsilon
+```
+
+$\alpha > \beta; \alpha = 7, \beta = 3$
+
+```{r}
+# a = 7, b = 3
+a = 7
+b = 3
+M = (a - 1)/(a + b - 2)
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a, b)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
+$\alpha = \beta; \alpha = 5, \beta = 5$
+
+```{r}
+# a = 5, b = 5
+a2 = 5
+b2 = 5
+M = (a2 - 1)/(a2 + b2 - 2)
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a2, b2)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
+$\alpha < \beta; \alpha = 3, \beta = 7$
+
+```{r}
+# a = 3, b = 7
+a3 = 3
+b3 = 7
+M = (a3 - 1)/(a3 + b3 - 2)
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a3, b3)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
+
+### Implementing the RNG Method to Neutrosophic Random Variables with $\delta = 0.1$ and $\epsilon = 0.2$
+
+```{r}
+NR_1 = R_1 - epsilon
+NR_2 = R_2 - epsilon
+
+epsilon_1 = 0.2
+delta = 0.1
+```
+
+$\alpha > \beta; \alpha = 7, \beta = 3$
+
+```{r}
+a_n = a + epsilon_1
+b_n = b + delta
+M = (a_n - 1)/(a_n + b_n - 2)
+NR1_function = beta_func(NR_1, a, b)/ M
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a_n, b_n)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
+
+$\alpha = \beta; \alpha = 5, \beta = 5$
+
+```{r}
+a_n2 = a2 + epsilon_1
+b_n2 = b2 + delta
+M = (a_n2 - 1)/(a_n2 + b_n2 - 2)
+NR1_function = beta_func(NR_1, a2, b2)/ M
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a_n2, b_n2)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
+$\alpha < \beta; \alpha = 3, \beta = 7$
+
+```{r}
+a_n3 = a3 + epsilon_1
+b_n3 = b3 + delta
+M = (a_n3 - 1)/(a_n3 + b_n3 - 2)
+NR1_function = beta_func(NR_1, a2, b2)/ M
+
+acceptance <- TRUE
+for (i in 1:length(NR_2)) {
+  NR1_function = beta_func(NR_1[i], a_n3, b_n3)/ M
+  if (NR_2[i] > NR1_function){
+    acceptance <- FALSE
+    break
+  }
+}
+
+if (acceptance) {
+  print("We accept that N(R1) follows the beta distribution")
+} else {
+  print("We reject that N(R1) follows the beta distribution. Try Again with a different Random Number")
+}
+```
+
