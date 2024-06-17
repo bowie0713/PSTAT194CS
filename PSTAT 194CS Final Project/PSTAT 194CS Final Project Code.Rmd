@@ -1,0 +1,566 @@
+---
+title: "PSTAT 194CS Final Project Appendix - Code"
+author: "Bowie Chuang, Sunny Zhong, and Isabella Sri"
+date: "2024-06-05"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = F}
+bfcolor <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{\\textbf{%s}}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'><b>%s</b></span>", color, x)
+  } else x
+}
+```
+
+```{r, eval = TRUE}
+library(igraphdata) 
+library(igraph)
+```
+
+
+## Reading and Loading the Network Data from Txt File
+```{r}
+# read in the raw edgelist
+email.data = read.table("~/Desktop/PSTAT 194CS/email-EuAll.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+
+# convert data to matrix
+email.edgelist = matrix(unlist(email.data), ncol = 2) + 1
+```
+
+```{r}
+# set up 'user' vertex attribute
+vertex_ids <- unique(c(email.data$X0, email.data$X1))
+vertex_users <- paste(vertex_ids)
+```
+
+## Setting Up the Margins
+``` {r}
+# default margins
+def_marg = c(5.1, 4.1, 4.1, 2.1)
+
+# no margins
+no_marg = c(0, 0, 0, 0)
+```
+
+
+## Converting the Network Data to Igraph Object
+```{r}
+email <- graph.edgelist((email.edgelist), directed = TRUE)
+email
+```
+
+```{r}
+# add 1 to values of email.data so that they match the values of email
+email.data$X0 <- email.data$X0 +1
+email.data$X1 <- email.data$X1 +1
+```
+
+
+## Check Attributes of the Data
+```{r}
+graph.attributes(email)
+vertex.attributes(email)
+edge.attributes(email)
+```
+
+**This shows that our network data has no attributes**
+
+
+```{r}
+# create user as a vertex attribute
+V(email)$user <- vertex_users
+```
+
+
+```{r}
+# Basic network properties
+num_vertices = vcount(email)
+num_edges = ecount(email)
+
+# Print properties
+cat("Number of vertices:", num_vertices, "\n")
+cat("Number of edges:", num_edges, "\n")
+```
+
+
+## Initial Metric Analysis of the Whole Network Data
+```{r}
+# Density to look at how connected each nodes are with each other
+graph.density(email)
+
+# Reciprocity
+reciprocity(email)
+
+# Dyad Census 
+dyad_census(email) # tell how many mutual, asymmetric, and null
+
+# Transitivity 
+transitivity(email)
+```
+
+## Generating Induced Subgraphs Using Random Sampling
+
+**200 Nodes** 
+```{r}
+# 1st subgraph with 200 nodes
+set.seed(111)
+
+V(email)$name = as.character(1:vcount(email))
+
+sampled_vertices = sample(V(email), 200)
+
+email_sub1 = induced_subgraph(email, sampled_vertices)
+
+plot(email_sub1,
+     # === vertex properties 
+     vertex.color = "#88398A",
+     vertex.frame.color = "#88398A",
+     vertex.size = 10,
+     # === vertex label properties
+     vertex.label.cex = 0.3,
+     vertex.label.color = "white",
+     vertex.label.family = "Helvetica",
+     # === edge properties
+     edge.color = "red",
+     edge.width = 0.5,
+     edge.arrow.size = 0.4)
+```
+
+**500 Nodes**
+```{r}
+# 2nd subgraph with 500 nodes
+set.seed(111)
+
+V(email)$name = as.character(1:vcount(email))
+
+sampled_vertices = sample(V(email), 500)
+
+
+email_sub2 = induced_subgraph(email, sampled_vertices)
+
+plot(email_sub2,
+     # === vertex properties 
+     vertex.color = "#88398A",
+     vertex.frame.color = "#88398A",
+     vertex.size = 6,
+     # === vertex label properties
+     vertex.label.cex = 0.3,
+     vertex.label.color = "white",
+     vertex.label.family = "Helvetica",
+     # === edge properties
+     edge.color = "red",
+     edge.width = 0.5,
+     edge.arrow.size = 0.4)
+```
+
+**5000 Nodes**
+```{r}
+# 3rd subgraph with 5000 nodes
+set.seed(111)
+
+V(email)$name = as.character(1:vcount(email))
+
+sampled_vertices = sample(V(email), 5000)
+
+
+email_sub3 = induced_subgraph(email, sampled_vertices)
+
+plot(email_sub3,
+     # === vertex properties 
+     vertex.color = "#88398A",
+     vertex.frame.color = "#88398A",
+     vertex.size = 3,
+     vertex.label = NA,
+     # === edge properties
+     edge.color = "red",
+     edge.width = 0.5,
+     edge.arrow.size = 0.4)
+```
+
+Based on the three plots of the induced subgraphs using random sampling (200, 500, and 5000), we can see that it is not effective to analyze the subgraphs of this network dataset using random sampling. 
+
+
+## Exploring the Email Addresses that Sent Emails to the Most Recipients and Received Emails from the Most Senders
+```{r}
+# Finding the email addresses that sent and received the most emails
+
+x = table(email.data$X0)
+paste("User who send out the most email: " , names(which.max(x))) # send out the most email
+paste("How many emails send out: " , max(x)) # User 84 send out 930 recipients
+y = table(email.data$X1)
+paste("User who receive the most email: ", names(which.max(y))) # receive the most email
+paste("How many emails received: ", max(y)) # User 179171 received emails from 7631 senders
+```
+
+We discovered that Node 84, identified as User 84, sent out emails to the most recipients, totaling 930 recipients. Additionally, User 179171 received emails from the most senders, amounting to 7631 senders. These users likely hold significant roles within the network. We hypothesize that a user receiving a high volume of emails may be more deeply connected to their community and potentially hold a leadership position. It's possible that many individuals are reporting back to them.
+
+
+## Looking Closer at Node 84: The User Who Sends to the Most Recipients
+```{r}
+# Separate plots for User 84's sent and received emails
+
+node_of_interest = '84'
+
+# SENT
+sent_edges <- email.data[email.data$X0 == node_of_interest, ]
+sent_nodes <- unique(sent_edges$X1)
+sent_subgraph1 <- induced_subgraph(email, c(node_of_interest, sent_nodes))
+if (vcount(sent_subgraph1) == 0) {
+  print("No nodes found to which mails were sent by the node of interest.")
+} else {
+  # node colors
+  vertex_colors <- rep("skyblue", vcount(sent_subgraph1))
+  vertex_colors[which(V(sent_subgraph1) == node_of_interest)] <- "red"
+  V(sent_subgraph1)$color <- vertex_colors
+  #node sizes
+  vertex_sizes <- rep(5, vcount(sent_subgraph1))
+  vertex_sizes[which(V(sent_subgraph1) == node_of_interest)] <- 15
+  V(sent_subgraph1)$size <- vertex_sizes
+  #plot
+  plot(sent_subgraph1, vertex.label = NA, main = paste("Subgraph of Node", node_of_interest, "and Sent Mails"))
+}
+```
+
+
+```{r}
+# RECEIVED
+received_edges <- email.data[email.data$X1 == node_of_interest, ]
+received_nodes <- unique(received_edges$X0)
+received_subgraph1 <- induced_subgraph(email, c(node_of_interest, received_nodes))
+if (vcount(received_subgraph1) == 0) {
+  print("No nodes found from which mails were received by the node of interest.")
+} else {
+  # node colors
+  vertex_colors <- rep("skyblue", vcount(received_subgraph1))
+  vertex_colors[which(V(received_subgraph1) == node_of_interest)] <- "red"
+  V(received_subgraph1)$color <- vertex_colors
+  #node sizes
+  vertex_sizes <- rep(5, vcount(received_subgraph1))
+  vertex_sizes[which(V(received_subgraph1) == node_of_interest)] <- 30
+  V(received_subgraph1)$size <- vertex_sizes
+  #plot
+  plot(received_subgraph1, vertex.label = NA, main = paste("Subgraph of Node", node_of_interest, "and Received Mails"))
+}
+```
+
+
+```{r}
+# Community detection and visualization for User 84's sent emails
+
+print(vcount(sent_subgraph1))
+print(vcount(received_subgraph1))
+und_1 <- as.undirected(sent_subgraph1)
+und_2 <- as.undirected(received_subgraph1)
+community11 <- fastgreedy.community(und_1)
+community12 <- fastgreedy.community(und_2)
+
+clusters <- cluster_fast_greedy(und_1)
+V(und_1)$group <- membership(clusters)
+num_groups <- length(unique(V(und_1)$group))
+group_colors <- rainbow(num_groups)
+V(und_1)$color <- group_colors[V(und_1)$group]
+plot(und_1, vertex.label = NA, main = "Graph with Nodes Colored by Group")
+```
+
+
+```{r}
+# Taking a random sample of User 84's sent email connections
+
+set.seed(123)
+node_of_interest <- '84'
+
+# SENT
+sent_edges <- email.data[email.data$X0 == node_of_interest, ]
+sent_nodes <- unique(sent_edges$X1)
+sent_subgraph1 <- induced_subgraph(email, c(node_of_interest, sent_nodes))
+edge_sample <- sample(E(sent_subgraph1), 930)
+sub.network1 <- subgraph.edges(sent_subgraph1, edge_sample)
+edge_count <- ecount(sub.network1)
+print(paste("Number of edges in the subgraph: ", edge_count))
+vertex_colors <- rep("skyblue", vcount(sub.network1))
+vertex_colors[sub.network1 == node_of_interest] <- "red"
+plot(sub.network1, vertex.label = NA, vertex.size = 3,
+     edge.arrow.size = 0.2, edge.width = 0.8, edge.color = "pink")
+```
+
+**Community Detection of Node 84**
+```{r}
+# Community detection and visualization for User 84's received emails
+
+clusters <- cluster_fast_greedy(und_2)
+V(und_2)$group <- membership(clusters)
+num_groups <- length(unique(V(und_2)$group))
+group_colors <- rainbow(num_groups)
+V(und_2)$color <- group_colors[V(und_2)$group]
+plot(und_2, vertex.label = NA, main = "Graph with Nodes Colored by Group")
+```
+
+
+## Looking Closer at Node 179171: The User Who Received Emails from the Most Senders
+```{r}
+# Separate plots for User 179171's sent and received emails
+
+node_of_interest <- '179171' 
+
+# SENT
+sent_edges <- email.data[email.data$X0 == node_of_interest, ]
+sent_nodes <- unique(c(node_of_interest, sent_edges$X1))
+sent_subgraph <- induced_subgraph(email, sent_nodes)
+if (vcount(sent_subgraph) == 0) {
+  print("No nodes found to which mails were sent by the node of interest.")
+} else {
+  #node colors
+  vertex_colors <- rep("skyblue", vcount(sent_subgraph))
+  vertex_colors[which(V(sent_subgraph) == '1')] <- "red"
+  V(sent_subgraph)$color <- vertex_colors
+  #node sizes
+  vertex_sizes <- rep(5, vcount(sent_subgraph))
+  vertex_sizes[which(V(sent_subgraph) == '1')] <- 10
+  V(sent_subgraph)$size <- vertex_sizes
+  #plot
+  plot(sent_subgraph, vertex.label = NA, main = paste("Subgraph of Node", node_of_interest, "and Sent Mails"))
+}
+```
+
+
+```{r}
+# RECEIVED
+received_edges <- email.data[email.data$X1 == node_of_interest, ]
+received_nodes <- unique(c(node_of_interest, received_edges$X0))
+received_subgraph <- induced_subgraph(email, which(V(email)$user %in% received_nodes))
+if (vcount(received_subgraph) == 0) {
+  print("No nodes found from which mails were received by the node of interest.")
+} else {
+  subgraph_users <- V(received_subgraph)$user
+  #node colors
+  vertex_colors <- rep("skyblue", vcount(received_subgraph))
+  vertex_colors[subgraph_users == node_of_interest] <- "red"
+  V(received_subgraph)$color <- vertex_colors
+  #node sizes
+  vertex_sizes <- rep(5, vcount(received_subgraph))
+  vertex_sizes[subgraph_users == node_of_interest] <- 10
+  V(received_subgraph)$size <- vertex_sizes
+  #plot
+  plot(received_subgraph, vertex.label = NA, main = paste("Subgraph of Node", node_of_interest, "and Received Mails"))
+}
+print(vcount(sent_subgraph))
+print(vcount(received_subgraph))
+```
+
+**Community Detection of Node 179171**
+```{r}
+# Community detection and visualization for User 179171's received emails
+
+und_22 <- as.undirected(received_subgraph)
+clusters2 <- cluster_fast_greedy(und_22)
+V(und_22)$group <- membership(clusters2)
+num_groups <- length(unique(V(und_22)$group))
+group_colors <- rainbow(num_groups)
+V(und_22)$color <- group_colors[V(und_22)$group]
+plot(und_22, vertex.label = NA, main = "Graph with Nodes Colored by Group")
+```
+
+
+```{r}
+# Taking a random sample of User 179171's received email connections with the communitiy detection visualization
+
+set.seed(122)
+sub.network2 <- induced.subgraph(und_22, sample(vcount(und_22), 900))
+edge_count <- ecount(sub.network2)
+print(paste("Number of edges in the subgraph: ", edge_count))
+plot(sub.network2, vertex.label = NA, vertex.size = 3,
+     edge.arrow.size = 0.2, edge.width = 0.8, edge.color = "pink")
+```
+
+
+## Exploring the Connections Between Email Addresses that Sent and Received Over 100 Emails
+```{r}
+set.seed(123)
+
+# SENT
+send <- as_ids(V(email)[degree(email, mode = "out") > 100]) # convert igraph.vs to vector
+email_sent_over100 = induced_subgraph(email, send)
+email_sent_over100
+
+plot(email_sent_over100, 
+     vertex.size = 5,
+     edge.color = "purple",
+     edge.width = 1.5,
+     edge.arrow.size = 0.2, 
+     vertex.label = NA)
+```
+
+
+```{r}
+# RECEIVED
+receive <- as_ids(V(email)[degree(email, mode = "in") > 100]) # convert igraph.vs to vector
+email_receive_over100 = induced_subgraph(email, receive)
+email_receive_over100
+
+plot(email_receive_over100, 
+     vertex.size = 5,
+     edge.color = "purple",
+     edge.width = 1.5,
+     edge.arrow.size = 0.2, 
+     vertex.label = NA)
+```
+
+
+## Exploring the Top 3 Email Addresses that Sent Emails to the Most Recipients
+
+We focused on the number of emails sent rather than received because receiving many emails doesn't necessarily indicate activity. Sending emails suggests active engagement and potential leadership roles. Therefore, analyzing senders provides insight into proactive involvement and network dynamics.
+
+*Finding Top 5*
+```{r}
+sort_x <- sort(x, decreasing = TRUE)
+top_5_send <- sort_x[1:5]
+top_5_send
+
+sort_y <- sort(y, decreasing = TRUE)
+top_5_receive <- sort_y[1:5]
+top_5_send
+
+names(top_5_send) # gives the names
+```
+
+
+## Creating 3 Subgraphs for 3 Nodes (Top 3 Email Addresses that Sent Emails to the Most Recipients) and Perform Analysis
+
+**The top 1 email address that sent emails to the most recipients is Node 84, which we already analyzed earlier. We are analyzing the other two.**
+
+```{r}
+neighbors_1 <- neighbors(email, 84, mode = "out") #email is our graph
+neighbors_2 <- neighbors(email, 179171, mode = "in")
+
+neighbors_1 <- as.vector(neighbors_1)
+neighbors_2 <- as.vector(neighbors_2)
+
+subgraph_nodes <- unique(c(neighbors_1, neighbors_2, c(84, 179171)))
+
+subgraph <- induced_subgraph(email, subgraph_nodes)
+```
+
+**Node 869**
+```{r}
+set.seed(111)
+# Node 869 
+neighbors_869 <- neighbors(email, 869, mode = "out") #email is our graph
+
+neighbors_869 <- as.vector(neighbors_869)
+
+subgraph_nodes_869 <- unique(c(neighbors_869, 869))
+
+subgraph_869 <- induced_subgraph(email, subgraph_nodes_869)
+
+vertex_colors <- rep("skyblue", vcount(subgraph_869))
+vertex_colors[which(V(subgraph_869) == '869')] <- "red"
+V(subgraph_869)$color <- vertex_colors
+
+# node sizes
+vertex_sizes <- rep(5, vcount(subgraph_869))
+vertex_sizes[which(V(subgraph_869) == '869')] <- 15
+V(subgraph_869)$size <- vertex_sizes
+
+# plot
+plot(subgraph_869, vertex.label = NA, main = paste("Subgraph of Node 869", "and Send Emails"))
+```
+
+
+```{r}
+print(paste("Graph Density:" , graph.density(subgraph_869)))
+
+print(paste("Average Path Length:", average.path.length(subgraph_869)))
+
+print(paste("Number of Articulation Point: ", length(articulation.points(subgraph_869))))
+
+print(paste("Farthest Vertices: ", farthest_vertices(subgraph_869)))
+
+undirected869 <- as.undirected(subgraph_869)
+
+kc_869 <- fastgreedy.community(undirected869)
+
+print(paste("Number of communities: ", length(kc_869)))
+
+sizes(kc_869)
+
+modularity(kc_869)
+
+plot(kc_869, undirected869, vertex.label = NA, main = paste("Subgraph of Node 869", "and Send Emails with Cluster Communities"))
+
+sub869.adjacency <- as_adj(subgraph_869)
+```
+
+
+**Node 193**
+```{r}
+
+neighbors_193 <- neighbors(email, 193, mode = "out") #email is our graph
+
+neighbors_193 <- as.vector(neighbors_193)
+
+subgraph_nodes_193 <- unique(c(neighbors_193, 193))
+
+subgraph_193 <- induced_subgraph(email, subgraph_nodes_193)
+
+vertex_colors <- rep("skyblue", vcount(subgraph_193))
+vertex_colors[which(V(subgraph_193) == '193')] <- "red"
+V(subgraph_193)$color <- vertex_colors
+
+# node sizes
+vertex_sizes <- rep(5, vcount(subgraph_193))
+vertex_sizes[which(V(subgraph_193) == '193')] <- 15
+V(subgraph_193)$size <- vertex_sizes
+
+# plot
+plot(subgraph_193, vertex.label = NA, main = paste("Subgraph of Node 193", "and Send Emails"))
+```
+
+
+```{r}
+print(paste("Graph Density: ", graph.density(subgraph_193)))
+
+print(paste("Average path Length: ", average.path.length(subgraph_193)))
+
+print(paste("Number of Articulation Point: ", length(articulation.points(subgraph_193))))
+
+print(paste("Farthest Vertices: ", farthest_vertices(subgraph_193)))
+
+undirected193 <- as.undirected(subgraph_193)
+
+kc_193 <- fastgreedy.community(undirected193)
+
+print(paste("Number of communities: ", length(kc_193)))
+
+sizes(kc_193)
+
+modularity(kc_193)
+
+plot(kc_193, undirected193, vertex.label = NA, main = paste("Subgraph of Node 193", "and Send Emails with Cluster Communities"))
+
+sub193.adjacency <- as_adj(subgraph_193)
+```
+
+
+## Top 5 Email Addresses Sending Emails to the Most Recipients and Receiving Emails from the Most Senders
+```{r}
+for (i in names(top_5_send)){
+  for (j in names(top_5_receive)){
+    if (email[as.numeric(i),as.numeric(j)] == 0){
+      print(paste("No Connections between node " , i, " and node ", j))
+    }
+    else{
+      print(paste("There are connections between node ", i, " and node ", j))
+    }
+  }
+}
+```
+
